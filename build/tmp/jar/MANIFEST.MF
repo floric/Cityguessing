@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Main-Class: App
+Implementation-Title: City Guessing
+Implementation-Version: 1.0-SNAPSHOT
+

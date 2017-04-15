@@ -26,7 +26,7 @@ public class NameQuestion implements Askable {
 
     @Override
     public String getHumanQuestion() {
-        return "Does the name of your city start with \"" + startChar + "\"?";
+        return "Beginnt der Name deiner Stadt mit \"" + startChar + "\"?";
     }
 
     @Override

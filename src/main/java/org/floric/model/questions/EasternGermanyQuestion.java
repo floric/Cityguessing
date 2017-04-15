@@ -29,7 +29,7 @@ public class EasternGermanyQuestion implements Askable {
 
     @Override
     public String getHumanQuestion() {
-        return "Is your city part of the former German Democratic Republic (GDR / DDR)?";
+        return "Ist die Stadt Teil der ehemaligen DDR?";
     }
 
     @Override

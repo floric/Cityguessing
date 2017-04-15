@@ -1,5 +1,9 @@
 package org.floric.importer;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.google.common.collect.Maps;
 import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 import org.floric.model.City;
@@ -18,9 +22,12 @@ public class CityImporter {
 
     private Map<String, String> stateMapping = Maps.newHashMap();
 
-    public List<City> importCsvFile(String path) throws FileNotFoundException {
-        InputStream is = new FileInputStream(new File(path));
-        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+    public List<City> importCsvFile(String countryFileName) {
+        AmazonS3 client = new AmazonS3Client();
+        S3Object countryFile = client.getObject("jar-artifacts", countryFileName);
+        S3ObjectInputStream objectContent = countryFile.getObjectContent();
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(objectContent));
 
         stateMapping.put("01", "Baden-Württemberg");
         stateMapping.put("02", "Bayern");

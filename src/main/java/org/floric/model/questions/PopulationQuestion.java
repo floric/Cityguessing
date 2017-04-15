@@ -29,7 +29,7 @@ public class PopulationQuestion implements Askable {
 
     @Override
     public String getHumanQuestion() {
-        return "Does your city have more then " + populationThreshold + " inhabitants?";
+        return "Hat deine Stadt mehr als " + populationThreshold + " Einwohner?";
     }
 
     @Override

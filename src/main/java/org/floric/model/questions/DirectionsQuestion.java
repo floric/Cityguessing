@@ -16,8 +16,8 @@ import java.util.stream.Collectors;
  */
 public class DirectionsQuestion implements Askable {
 
-    private static final String NORTH = "north";
-    private static final String EAST = "east";
+    private static final String NORTH = "nördlich";
+    private static final String EAST = "östlich";
 
     private List<City> cities;
     private List<City> remainingCities;
@@ -52,7 +52,7 @@ public class DirectionsQuestion implements Askable {
 
     @Override
     public String getHumanQuestion() {
-        return "Is the city more " + direction + " then " + referenceCity.getName() + "?";
+        return "Ist die Stadt " + direction + " von " + referenceCity.getName() + "?";
     }
 
     @Override

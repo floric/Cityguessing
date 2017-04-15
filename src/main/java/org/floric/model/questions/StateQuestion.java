@@ -26,7 +26,7 @@ public class StateQuestion implements Askable {
 
     @Override
     public String getHumanQuestion() {
-        return "Is your city part of " + stateName + "?";
+        return "Ist deine Stadt Teil von " + stateName + "?";
     }
 
     @Override

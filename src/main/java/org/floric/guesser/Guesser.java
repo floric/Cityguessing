@@ -6,15 +6,14 @@ import com.google.common.collect.Sets;
 import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 import org.apache.commons.math3.util.MathUtils;
 import org.apache.commons.math3.util.Pair;
+import org.floric.app.Game;
 import org.floric.importer.CityImporter;
 import org.floric.model.Askable;
 import org.floric.model.City;
 import org.floric.model.questions.*;
 
-import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.Queue;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,81 +27,65 @@ public class Guesser {
     private Set<String> askedQuestions = Sets.newHashSet();
     private Queue<Askable> plannedQuestions = Queues.newLinkedBlockingDeque();
 
-    boolean needNewQuestions = true;
+    private boolean needNewQuestions = true;
+    private boolean finishedGuessing = false;
 
-    public enum GuessResponse {
-        YES,
-        NO,
-        MAYBE
+    public Guesser() {
+        CityImporter importer = new CityImporter();
+
+        this.allCities = importer.importCsvFile("DE.csv");
+
+        restart();
     }
 
-    public Guesser() throws FileNotFoundException {
-        CityImporter importer = new CityImporter();
-        this.allCities = importer.importCsvFile("/home/florian/Downloads/DE/DE.csv");
-        this.cities = Lists.newArrayList(allCities);
+    public boolean isGuessingFinished() {
+        return finishedGuessing;
     }
 
     public void restart() {
         this.cities = Lists.newArrayList(allCities);
+        this.needNewQuestions = true;
+        this.askedQuestions = Sets.newHashSet();
+        this.plannedQuestions = Queues.newLinkedBlockingDeque();
+        this.finishedGuessing = false;
     }
 
     public String getNextQuestion() {
+        if (needNewQuestions) {
+            plannedQuestions.clear();
+            List<Askable> questions = generatePossibleQuestions();
+            questions.sort(Askable::compareTo);
+            plannedQuestions.addAll(questions);
+        }
 
+        if (cities.size() == 1) {
+            finishedGuessing = true;
+            return ("Es muss " + cities.get(0).getName() + " sein! Willst du nochmal spielen?");
+        } else if (cities.isEmpty() || plannedQuestions.isEmpty()) {
+            finishedGuessing = true;
+            return ("Du hast gewonnen. Ich habe leider keine Ahnung. Willst du nochmal spielen?");
+        }
+
+        Askable questionToUse = plannedQuestions.peek();
+        askedQuestions.add(questionToUse.getHumanQuestion());
+
+        return questionToUse.getHumanQuestion();
     }
 
-    public void receiveResponse(GuessResponse response) {
+    public void receiveResponse(Game.GameResponse response) {
+        Askable questionToUse = plannedQuestions.poll();
 
-    }
-
-    public void start() {
-        int iterations = 1;
-
-        while(true) {
-            if (needNewQuestions) {
-                plannedQuestions.clear();
-                List<Askable> questions = generatePossibleQuestions();
-                questions.sort(Askable::compareTo);
-                plannedQuestions.addAll(questions);
-            }
-
-            if (cities.size() == 1) {
-                System.out.println("It needs to be " + cities.get(0).getName() + "!");
-                break;
-            } else if (cities.isEmpty()) {
-                System.out.println("I don't know what you have had in mind!");
-                break;
-            } else if (plannedQuestions.isEmpty()) {
-                System.out.println("I have no idea which city you had picked...");
-                break;
-            }
-
-            // Next planned questions:
-            // questions.forEach(q -> System.out.println(q.getHumanQuestion() + " -> " + q.getDiscardPercentage()));
-
-            Askable questionToUse = plannedQuestions.poll();
-            System.out.println(iterations + ") Alexa asks: " + questionToUse.getHumanQuestion());
-            if (cities.size() < 10) {
-                System.out.println("Left: " + cities.stream().map(City::getName).reduce((a, b) -> a + ", " + b));
-            }
-
-            askedQuestions.add(questionToUse.getHumanQuestion());
-
-            Scanner keyboard = new Scanner(System.in);
-            System.out.println("Please answer with: y (yes) | n (no) | m (maybe, not sure)");
-            String input = keyboard.next();
-
-            if (input.equals("y")) {
-                cities = questionToUse.apply();
-                needNewQuestions = true;
-            } else if (input.equals("n")) {
-                List<City> notMatchingCities = questionToUse.apply();
-                cities = cities.stream().filter((o) -> !notMatchingCities.contains(o)).collect(Collectors.toList());
-                needNewQuestions = true;
-            } else {
-                needNewQuestions = false;
-            }
-
-            iterations++;
+        if (response == Game.GameResponse.YES) {
+            cities = questionToUse.apply();
+            needNewQuestions = true;
+        } else if (response == Game.GameResponse.NO) {
+            List<City> notMatchingCities = questionToUse.apply();
+            cities = cities.stream()
+                    .filter((o) -> !notMatchingCities.contains(o))
+                    .collect(Collectors.toList());
+            needNewQuestions = true;
+        } else if (response == Game.GameResponse.MAYBE){
+            needNewQuestions = false;
         }
     }
 

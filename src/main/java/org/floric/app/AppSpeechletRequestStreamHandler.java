@@ -15,7 +15,7 @@ public class AppSpeechletRequestStreamHandler extends SpeechletRequestStreamHand
 
     static {
         supportedApplicationIds = new HashSet<>();
-        // supportedApplicationIds.add("amzn1.echo-sdk-ams.app.[unique-value-here]");
+        supportedApplicationIds.add("amzn1.ask.skill.25af7b6b-3e8d-42d5-9ad6-c413571dc703");
     }
 
     public AppSpeechletRequestStreamHandler() {

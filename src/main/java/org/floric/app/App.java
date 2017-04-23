@@ -21,7 +21,7 @@ public class App implements Speechlet {
                 "Ich werde dann Fragen stellen, die du mit \"ja\", \"nein\" oder \"ich weiß nicht\" beantworten kannst. " +
                 "Bist du bereit?";
 
-        return Game.newAskResponseWithoutReprompt(welcomeMessage);
+        return Game.newAskResponse(welcomeMessage, "Bist du bereit für das Spiel?");
     }
 
     @Override

@@ -29,6 +29,10 @@ public class Guesser {
 
     private boolean needNewQuestions = true;
     private boolean finishedGuessing = false;
+    private boolean wasGuessingSuccessfull = false;
+    private String foundCityName = "";
+    private int askedQuestionsCount = 0;
+    private int answeredQuestionsCount = 0;
 
     public Guesser() {
         CityImporter importer = new CityImporter();
@@ -42,12 +46,32 @@ public class Guesser {
         return finishedGuessing;
     }
 
+    public boolean wasGuessingSuccessfull() {
+        return wasGuessingSuccessfull;
+    }
+
+    public String getFoundCityName() {
+        return foundCityName;
+    }
+
+    public int getAskedQuestionsCount() {
+        return askedQuestionsCount;
+    }
+
+    public int getAnsweredQuestionsCount() {
+        return answeredQuestionsCount;
+    }
+
     public void restart() {
         this.cities = Lists.newArrayList(allCities);
         this.needNewQuestions = true;
         this.askedQuestions = Sets.newHashSet();
         this.plannedQuestions = Queues.newLinkedBlockingDeque();
         this.finishedGuessing = false;
+        this.wasGuessingSuccessfull = false;
+        this.foundCityName = "";
+        this.askedQuestionsCount = 0;
+        this.answeredQuestionsCount = 0;
     }
 
     public String getNextQuestion() {
@@ -59,15 +83,20 @@ public class Guesser {
         }
 
         if (cities.size() == 1) {
+            String cityName = cities.get(0).getName();
             finishedGuessing = true;
-            return ("Es muss " + cities.get(0).getName() + " sein! Willst du nochmal spielen?");
+            wasGuessingSuccessfull = true;
+            this.foundCityName = cityName;
+            return ("Es muss " + cityName + " sein! Willst du nochmal spielen?");
         } else if (cities.isEmpty() || plannedQuestions.isEmpty()) {
             finishedGuessing = true;
+            wasGuessingSuccessfull = false;
             return ("Du hast gewonnen. Ich habe leider keine Ahnung. Willst du nochmal spielen?");
         }
 
         Askable questionToUse = plannedQuestions.peek();
         askedQuestions.add(questionToUse.getHumanQuestion());
+        askedQuestionsCount++;
 
         return questionToUse.getHumanQuestion();
     }
@@ -78,12 +107,14 @@ public class Guesser {
         if (response == Game.GameResponse.YES) {
             cities = questionToUse.apply();
             needNewQuestions = true;
+            answeredQuestionsCount++;
         } else if (response == Game.GameResponse.NO) {
             List<City> notMatchingCities = questionToUse.apply();
             cities = cities.stream()
                     .filter((o) -> !notMatchingCities.contains(o))
                     .collect(Collectors.toList());
             needNewQuestions = true;
+            answeredQuestionsCount++;
         } else if (response == Game.GameResponse.MAYBE){
             needNewQuestions = false;
         }

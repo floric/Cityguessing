@@ -2,6 +2,8 @@ package org.floric.app;
 
 import com.amazon.speech.slu.Intent;
 import com.amazon.speech.speechlet.*;
+import com.amazon.speech.ui.Card;
+import com.amazon.speech.ui.SimpleCard;
 import org.floric.guesser.Guesser;
 import org.floric.model.Mode;
 

@@ -54,7 +54,8 @@ public class Guesser {
         CityImporter importer = new CityImporter();
 
         try {
-            this.allCities = importer.importFromLocalFolder("/home/florian/Downloads/DE/DE.csv");
+            // this.allCities = importer.importFromLocalFolder("/home/florian/Downloads/DE/DE.csv");
+            this.allCities = importer.importFromS3("jar-artifacts", "DE.csv");
         } catch (IOException e) {
             System.err.println("File not found");
         }

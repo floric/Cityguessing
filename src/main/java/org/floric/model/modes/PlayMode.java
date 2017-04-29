@@ -1,6 +1,7 @@
 package org.floric.model.modes;
 
 import com.amazon.speech.speechlet.SpeechletResponse;
+import com.amazon.speech.ui.SimpleCard;
 import org.floric.app.Game;
 import org.floric.guesser.Guesser;
 import org.floric.model.Mode;
@@ -19,6 +20,14 @@ public class PlayMode implements Mode {
             lastResponse = guesser.getNextQuestion();
         } else {
             wasRepeat = false;
+        }
+
+        if (lastResponse.isShowCard()) {
+            SimpleCard card = new SimpleCard();
+            card.setTitle(lastResponse.getHeadline());
+            card.setContent(lastResponse.getText());
+
+            return Game.newAskResponse(lastResponse.getText(), "Ich wiederhole: " + lastResponse.getText(), card);
         }
 
         return Game.newAskResponse(lastResponse.getText(), "Ich wiederhole: " + lastResponse.getText());

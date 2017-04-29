@@ -1,17 +1,19 @@
 package org.floric.model;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * Created by florian on 4/14/17.
  */
-public interface Askable extends Comparable<Askable> {
+public interface Question extends Comparable<Question> {
 
     String getHumanQuestion();
-    List<City> apply();
+    Set<City>
+    apply();
     double getDiscardPercentage();
+    QuestionGenerator getGenerator();
 
-    default int compareTo(Askable o) {
+    default int compareTo(Question o) {
         return Double.compare(Math.abs(50.0 - getDiscardPercentage()), Math.abs(50.0 - o.getDiscardPercentage()));
     }
 }

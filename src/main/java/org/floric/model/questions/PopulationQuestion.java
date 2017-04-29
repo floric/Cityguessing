@@ -2,29 +2,33 @@ package org.floric.model.questions;
 
 import org.floric.guesser.FilterFinder;
 import org.floric.guesser.Guesser;
-import org.floric.model.Askable;
+import org.floric.model.Question;
 import org.floric.model.City;
+import org.floric.model.QuestionGenerator;
+import org.floric.model.questions.generators.PopulationQuestionGenerator;
 
-import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
  * Created by florian on 4/14/17.
  */
-public class PopulationQuestion implements Askable {
+public class PopulationQuestion implements Question {
 
     private int populationThreshold = 0;
-    private List<City> cities;
-    private List<City> remainingCities;
+    private Set<City> cities;
+    private Set<City> remainingCities;
+    private PopulationQuestionGenerator generator;
 
-    public PopulationQuestion(List<City> cities) {
+    public PopulationQuestion(Set<City> cities, PopulationQuestionGenerator generator) {
         FilterFinder filterFinder = new FilterFinder();
 
         populationThreshold = getRoundedPopulation(filterFinder.getFilterValue(cities, c -> (double) c.getPopulation()));
         this.cities = cities;
         this.remainingCities = cities.stream()
                 .filter(c -> c.getPopulation() > populationThreshold)
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
+        this.generator = generator;
     }
 
     @Override
@@ -33,13 +37,18 @@ public class PopulationQuestion implements Askable {
     }
 
     @Override
-    public List<City> apply() {
+    public Set<City> apply() {
         return remainingCities;
     }
 
     @Override
     public double getDiscardPercentage() {
-        return Guesser.getDiscardPercentage(remainingCities, cities);
+        return Guesser.getRoundedDiscardPercentage(remainingCities, cities);
+    }
+
+    @Override
+    public QuestionGenerator getGenerator() {
+        return generator;
     }
 
     private int getRoundedPopulation(double populationThreshold) {

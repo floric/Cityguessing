@@ -3,15 +3,17 @@ package org.floric.guesser;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.google.common.collect.Sets;
-import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import org.apache.commons.math3.util.MathUtils;
-import org.apache.commons.math3.util.Pair;
 import org.floric.app.Game;
 import org.floric.importer.CityImporter;
-import org.floric.model.Askable;
+import org.floric.model.Question;
 import org.floric.model.City;
-import org.floric.model.questions.*;
+import org.floric.model.QuestionGenerator;
+import org.floric.model.questions.generators.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
@@ -22,134 +24,124 @@ import java.util.stream.Collectors;
  */
 public class Guesser {
 
-    private List<City> cities;
-    private List<City> allCities;
-    private Set<String> askedQuestions = Sets.newHashSet();
-    private Queue<Askable> plannedQuestions = Queues.newLinkedBlockingDeque();
+    private Set<City> cities;
+    private Set<City> allCities;
+    private Set<String> askedQuestions;
+    private Queue<Question> plannedQuestions;
+    private Set<QuestionGenerator> questionGenerators;
+    private Set<QuestionGenerator> maybeAnsweredGenerators;
+    private int answeredQuestionsCount;
+    private int askedQuestionsCount;
 
     private boolean needNewQuestions = true;
-    private boolean finishedGuessing = false;
-    private boolean wasGuessingSuccessfull = false;
-    private String foundCityName = "";
-    private int askedQuestionsCount = 0;
-    private int answeredQuestionsCount = 0;
+
+    public enum GuesserState {
+        MULTIPLE_CITIES_LEFT,
+        ONE_CITY_LEFT,
+        NO_CITY_LEFT
+    }
+
+    @Data
+    @AllArgsConstructor
+    public class Response {
+        private String text;
+        private String headline;
+        private boolean showCard;
+        private GuesserState state;
+    }
 
     public Guesser() {
         CityImporter importer = new CityImporter();
 
-        this.allCities = importer.importCsvFile("DE.csv");
+        try {
+            this.allCities = importer.importFromLocalFolder("/home/florian/Downloads/DE/DE.csv");
+        } catch (IOException e) {
+            System.err.println("File not found");
+        }
 
-        restart();
+        init();
     }
 
-    public boolean isGuessingFinished() {
-        return finishedGuessing;
+    public void init() {
+        cities = Sets.newHashSet(allCities);
+        needNewQuestions = true;
+        askedQuestions = Sets.newHashSet();
+        plannedQuestions = Queues.newLinkedBlockingDeque();
+        askedQuestionsCount = 0;
+        answeredQuestionsCount = 0;
+
+        questionGenerators = Sets.newHashSet();
+        questionGenerators.add(new DirectionsQuestionGenerator());
+        questionGenerators.add(new HistoricalQuestionGenerator());
+        questionGenerators.add(new NameQuestionsGenerator());
+        questionGenerators.add(new PopulationQuestionGenerator());
+        questionGenerators.add(new StateQuesionGenerator());
+
+        maybeAnsweredGenerators = Sets.newHashSet();
     }
 
-    public boolean wasGuessingSuccessfull() {
-        return wasGuessingSuccessfull;
-    }
-
-    public String getFoundCityName() {
-        return foundCityName;
-    }
-
-    public int getAskedQuestionsCount() {
-        return askedQuestionsCount;
-    }
-
-    public int getAnsweredQuestionsCount() {
-        return answeredQuestionsCount;
-    }
-
-    public void restart() {
-        this.cities = Lists.newArrayList(allCities);
-        this.needNewQuestions = true;
-        this.askedQuestions = Sets.newHashSet();
-        this.plannedQuestions = Queues.newLinkedBlockingDeque();
-        this.finishedGuessing = false;
-        this.wasGuessingSuccessfull = false;
-        this.foundCityName = "";
-        this.askedQuestionsCount = 0;
-        this.answeredQuestionsCount = 0;
-    }
-
-    public String getNextQuestion() {
+    public Response getNextQuestion() {
         if (needNewQuestions) {
             plannedQuestions.clear();
-            List<Askable> questions = generatePossibleQuestions();
-            questions.sort(Askable::compareTo);
+            List<Question> questions = generatePossibleQuestions();
+            questions.sort(Question::compareTo);
+            questions.forEach(q -> System.out.println(q.getHumanQuestion() + ": " + q.getDiscardPercentage()));
             plannedQuestions.addAll(questions);
         }
 
         if (cities.size() == 1) {
-            String cityName = cities.get(0).getName();
-            finishedGuessing = true;
-            wasGuessingSuccessfull = true;
-            this.foundCityName = cityName;
-            return ("Es muss " + cityName + " sein! Willst du nochmal spielen?");
+            String cityName = cities.stream().findFirst().get().getName();
+            return new Response(
+                    "Es muss " + cityName + " sein! Ich habe die Stadt in " + answeredQuestionsCount + " von " +
+                            askedQuestionsCount + " Fragen gefunden. Möchtest du nochmal spielen?",
+                    cityName + " erraten",
+                    true,
+                    GuesserState.ONE_CITY_LEFT);
         } else if (cities.isEmpty() || plannedQuestions.isEmpty()) {
-            finishedGuessing = true;
-            wasGuessingSuccessfull = false;
-            return ("Du hast gewonnen. Ich habe leider keine Ahnung. Willst du nochmal spielen?");
+            return new Response(
+                    "Du hast gewonnen. Ich habe leider keine Ahnung. Möchtest du nochmal spielen?",
+                    "Leider nicht erraten",
+                    true,
+                    GuesserState.NO_CITY_LEFT);
         }
 
-        Askable questionToUse = plannedQuestions.peek();
+        Question questionToUse = plannedQuestions.peek();
         askedQuestions.add(questionToUse.getHumanQuestion());
         askedQuestionsCount++;
 
-        return questionToUse.getHumanQuestion();
+        return new Response(
+                questionToUse.getHumanQuestion(),
+                "Neue Frage",
+                false,
+                GuesserState.MULTIPLE_CITIES_LEFT);
     }
 
     public void receiveResponse(Game.GameResponse response) {
-        Askable questionToUse = plannedQuestions.poll();
+        Question questionToUse = plannedQuestions.poll();
 
         if (response == Game.GameResponse.YES) {
             cities = questionToUse.apply();
             needNewQuestions = true;
             answeredQuestionsCount++;
         } else if (response == Game.GameResponse.NO) {
-            List<City> notMatchingCities = questionToUse.apply();
+            Set<City> notMatchingCities = questionToUse.apply();
             cities = cities.stream()
                     .filter((o) -> !notMatchingCities.contains(o))
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toSet());
             needNewQuestions = true;
             answeredQuestionsCount++;
         } else if (response == Game.GameResponse.MAYBE){
             needNewQuestions = false;
+            maybeAnsweredGenerators.add(questionToUse.getGenerator());
         }
     }
 
-    private List<Askable> generatePossibleQuestions() {
-        List<Askable> questions = Lists.newArrayList();
+    private List<Question> generatePossibleQuestions() {
+        List<Question> questions = Lists.newArrayList();
 
-        Pair<Vector2D, Vector2D> area = getPossibleArea();
-
-        questions.add(new PopulationQuestion(cities));
-
-        Set<String> states = cities.stream()
-                .map(City::getStateCode)
-                .collect(Collectors.toSet());
-        states.forEach(s -> questions.add(new StateQuestion(s, cities)));
-
-        Set<String> letters = cities.stream()
-                .map(c -> c.getName().substring(0, 1))
-                .collect(Collectors.toSet());
-        letters.forEach(l -> questions.add(new NameQuestion(l, cities)));
-
-        // take ten biggest cities in search area as a reference
-        List<City> orientationalCities = allCities.stream()
-                .filter(c -> c.getCoordinate().getX() < area.getKey().getX() &&
-                        c.getCoordinate().getX() > area.getValue().getX() &&
-                        c.getCoordinate().getY() > area.getKey().getY() &&
-                        c.getCoordinate().getY() < area.getValue().getY()
-                )
-                .sorted((a, b) -> -Double.compare(a.getPopulation(), b.getPopulation()))
-                .limit(10)
-                .collect(Collectors.toList());
-        orientationalCities.forEach(c -> questions.add(new DirectionsQuestion(c, cities)));
-
-        questions.add(new EasternGermanyQuestion(cities));
+        questionGenerators.stream()
+                .filter(generator -> generator.allowMoreQuestionsAfterMaybe() || !maybeAnsweredGenerators.contains(generator))
+                .forEach(generator -> questions.addAll(generator.getNewQuestions(cities, allCities)));
 
         return questions.stream()
                 .filter(q -> !askedQuestions.contains(q.getHumanQuestion()))
@@ -157,19 +149,11 @@ public class Guesser {
                 .collect(Collectors.toList());
     }
 
-    private Pair<Vector2D, Vector2D> getPossibleArea() {
-        double northBorder = cities.stream().mapToDouble(c -> c.getCoordinate().getX()).max().orElse(0);
-        double southBorder = cities.stream().mapToDouble(c -> c.getCoordinate().getX()).min().orElse(0);
-        double westBorder = cities.stream().mapToDouble(c -> c.getCoordinate().getY()).min().orElse(0);
-        double eastBorder = cities.stream().mapToDouble(c -> c.getCoordinate().getY()).max().orElse(0);
-        return Pair.create(new Vector2D(northBorder, westBorder), new Vector2D(southBorder, eastBorder));
-    }
-
-    public static int getSummedInhabitants(List<City> cities) {
+    public static int getSummedInhabitants(Set<City> cities) {
         return (int) cities.stream().mapToDouble(City::getPopulation).sum();
     }
 
-    public static double getDiscardPercentage(List<City> filteredCities, List<City> remainingCities) {
-        return Guesser.getSummedInhabitants(filteredCities) * 100.0 / Guesser.getSummedInhabitants(remainingCities);
+    public static double getRoundedDiscardPercentage(Set<City> filteredCities, Set<City> remainingCities) {
+        return Math.round(Guesser.getSummedInhabitants(filteredCities) * 100.0 / Guesser.getSummedInhabitants(remainingCities));
     }
 }

@@ -5,6 +5,7 @@ import org.floric.model.City;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -16,7 +17,7 @@ public class FilterFinder {
 
     }
 
-    public double getFilterValue(List<City> cities, Function<City, Double> mapCityToScalarValue) {
+    public double getFilterValue(Set<City> cities, Function<City, Double> mapCityToScalarValue) {
         double[] mappedCities = cities.stream().mapToDouble(mapCityToScalarValue::apply).toArray();
 
         double middleVal = StatUtils.mean(mappedCities);

@@ -13,7 +13,7 @@ public class StartMode implements Mode {
     @Override
     public SpeechletResponse getQuestion(Guesser guesser) {
         return Game.newAskResponse("Hallo, ich kann nach Städten raten. Bitte überlege dir eine Stadt. " +
-                "Ich werde dann Fragen stellen, die du mit \"ja\", \"nein\" oder \"ich weiß nicht\" beantworten kannst. ",
+                "Ich werde dann Fragen stellen, die du mit \"ja\", \"nein\" oder \"ich weiß nicht\" beantworten kannst. Alles klar?",
                 "Bist du bereit?");
     }
 
